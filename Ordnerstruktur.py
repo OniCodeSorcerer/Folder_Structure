@@ -16,9 +16,9 @@ class FolderCreator(App):
 
         self.current_number = self.get_current_number()
         self.kwtmva = ""
-        self.ober_ordner = "Aufträge"
+        self.ueber_ordner = "Aufträge"
            
-        layout = GridLayout(cols= 2, spacing=10, padding= 50)
+        layout = GridLayout(cols= 2, spacing=5, padding= 50)
         widget_height = 60
 
         geber_label = Label(text= "Auftraggeber: ",size_hint_y=None, height=30)
@@ -32,6 +32,24 @@ class FolderCreator(App):
 
         self.arbeit_text = TextInput(multiline= False,size_hint_y=None, height=30)
         layout.add_widget(self.arbeit_text)
+
+        strasse_label = Label(text= "Straße: ",size_hint_y=None, height=30)
+        layout.add_widget(strasse_label)
+
+        self.strasse_text = TextInput(multiline= False,size_hint_y=None, height=30)
+        layout.add_widget(self.strasse_text)
+
+        plz_label = Label(text= "PLZ / Ort: ",size_hint_y=None, height=30)
+        layout.add_widget(plz_label)
+
+        self.plz_text = TextInput(multiline= False,size_hint_y=None, height=30)
+        layout.add_widget(self.plz_text)
+
+        telefon_label = Label(text= "Telefonnr.: ",size_hint_y=None, height=30)
+        layout.add_widget(telefon_label)
+
+        self.telefon_text = TextInput(multiline= False,size_hint_y=None, height=30)
+        layout.add_widget(self.telefon_text)
 
         dropdown_label = Label(text= "Ordnerauswahl: ")
         layout.add_widget(dropdown_label)        
@@ -65,15 +83,16 @@ class FolderCreator(App):
         self.dropdown_button.text = instance.text
         self.dropdown.dismiss()
         if instance.text == "Kleinstaufträge":
-            self.ober_ordner = "Kleinstaufträge"
+            self.ueber_ordner = "04-Kleinstaufträge"
+            self.kwtmva = "KAT_"
 
         elif instance.text == "Klärwerkstechnik":
-            self.ober_ordner = "Aufträge"
+            self.ueber_ordner = "03-Aufträge"
             self.kwtmva = "KWT_"
 
 
         elif instance.text == "Metallverarbeitung":
-            self.ober_ordner = "Aufträge"
+            self.ueber_ordner = "03-Aufträge"
             self.kwtmva = "MVA_"
 
 
@@ -90,37 +109,65 @@ class FolderCreator(App):
         arbeit = self.arbeit_text.text
         datum = datetime.now().strftime("%Y%m%d")
         num = self.current_number
-        neuer_ordner_name = f"{num:03d}_{datum}_{self.kwtmva}{auftragsname}-{arbeit}"
-        texteingabe = f"Erstellt am: {datum}"
-        ober_ordner = self.ober_ordner
-        ober_dir = os.path.join(os.getcwd(), ober_ordner, neuer_ordner_name)
+        auftrag_ordner_name = f"{num:03d}_{datum}_{self.kwtmva}{auftragsname}-{arbeit}"
+        texteingabe = f"Erstellt am: {datum} \nAuftraggeber: {auftragsname} \nAuftragsarbeit: {arbeit} \nStraße: {self.strasse_text.text} \nPLZ / Ort: {self.plz_text.text} \nTelefonnr.: {self.telefon_text.text} \n"
+        ueber_ordner = self.ueber_ordner        
+        manufactory_ordner = "07-Manufactory"
+        ueber_dir = os.path.join(os.getcwd(), ueber_ordner, auftrag_ordner_name)
+        manufactory_dir = os.path.join(os.getcwd(), manufactory_ordner, auftrag_ordner_name)
+        script_directory = os.path.dirname(__file__)
 
-        os.chdir(ober_ordner)
+        if not os.path.exists(ueber_ordner):
+            os.makedirs(ueber_ordner)
+            print(f"Der Ordner '{ueber_ordner}' wurde erfolgreich erstellt.")
 
-        if not os.path.exists(ober_dir):
-            
-            os.makedirs(neuer_ordner_name)
-            print(f"Der Ordner '{neuer_ordner_name}' wurde erfolgreich erstellt.")
+        else:
+            print(f"Der Ordner '{manufactory_ordner}' existiert bereits.")
+
+        if not os.path.exists(manufactory_ordner):
+            os.makedirs(manufactory_ordner)
+            print(f"Der Ordner '{manufactory_ordner}' wurde erfolgreich erstellt.")
+
+        else:
+            print(f"Der Ordner '{manufactory_ordner}' existiert bereits.")
+
+        os.chdir(manufactory_ordner)
+
+        if not os.path.exists(auftrag_ordner_name):
+            os.makedirs(auftrag_ordner_name)
+            print(f"Der Ordner '{auftrag_ordner_name}' wurde erfolgreich im {manufactory_ordner} erstellt.")
+
+        else:
+            print(f"Der Ordner '{manufactory_ordner}' existiert bereits.")
+
+        os.chdir(script_directory)
+        os.chdir(ueber_ordner)
+
+        if not os.path.exists(auftrag_ordner_name):      
+            os.makedirs(auftrag_ordner_name)
+            print(f"Der Ordner '{auftrag_ordner_name}' wurde erfolgreich erstellt.")
 
             try:
-                manufactory = f"MFC_{neuer_ordner_name}"
-                manufactory_dir = os.path.join(ober_dir, manufactory)
-                os.symlink(ober_dir, manufactory_dir)
-                print(f"Die Ordnerverknüpfung 'Manufaktur' wurde erfolgreich erstellt.")
+                manufactory = f"MFC_{auftrag_ordner_name}"
+                manufactory_ver = os.path.join(ueber_dir, manufactory)
+                os.symlink(manufactory_dir, manufactory_ver)
+                print(f"Die Ordnerverknüpfung {manufactory} wurde erfolgreich erstellt.")
 
             except PermissionError:
-                print("keine Rechte vorhanden. Programm als Admin starten")
+                print("keine Rechte vorhanden. Programm als Admin starten!")
 
-            with open(os.path.join(neuer_ordner_name, f"{auftragsname}_{arbeit}.txt"), "w") as file:
+            with open(os.path.join(auftrag_ordner_name, f"{auftragsname}_{arbeit}.txt"), "w") as file:
                 file.write(texteingabe)
 
         else:
-            print(f"Der Ordner '{neuer_ordner_name}' existiert bereits.")
+            print(f"Der Ordner '{auftrag_ordner_name}' existiert bereits.")
 
-        script_directory = os.path.dirname(__file__)
+        
         os.chdir(script_directory)
         with open("current_number.txt", "w") as file:
             file.write(str(num + 1))
+
+        self.current_number += 1
 
 elevate.elevate()
 FolderCreator().run()
