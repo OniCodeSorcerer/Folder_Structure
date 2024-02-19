@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import elevate
 from datetime import datetime
 import kivy
@@ -10,13 +11,17 @@ from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.uix.switch import Switch
+from openpyxl import Workbook
+from openpyxl import load_workbook
+
+elevate.elevate()
 
 class FolderCreator(App):
     def build(self):
 
         self.current_number = self.get_current_number()
         self.kwtmva = ""
-        self.ueber_ordner = "Aufträge"
+        self.ueber_ordner = ""
            
         layout = GridLayout(cols= 2, spacing=5, padding= 50)
         widget_height = 60
@@ -117,12 +122,16 @@ class FolderCreator(App):
         manufactory_dir = os.path.join(os.getcwd(), manufactory_ordner, auftrag_ordner_name)
         script_directory = os.path.dirname(__file__)
 
+        if ueber_ordner == "":
+            print("Bitte wählen Sie einen Ordner aus.")
+            return
+
         if not os.path.exists(ueber_ordner):
             os.makedirs(ueber_ordner)
             print(f"Der Ordner '{ueber_ordner}' wurde erfolgreich erstellt.")
 
         else:
-            print(f"Der Ordner '{manufactory_ordner}' existiert bereits.")
+            print(f"Der Ordner '{ueber_ordner}' existiert bereits.")
 
         if not os.path.exists(manufactory_ordner):
             os.makedirs(manufactory_ordner)
@@ -140,8 +149,12 @@ class FolderCreator(App):
         else:
             print(f"Der Ordner '{manufactory_ordner}' existiert bereits.")
 
-        os.chdir(script_directory)
-        os.chdir(ueber_ordner)
+        try:
+            os.chdir(script_directory)
+            os.chdir(ueber_ordner)
+            print(f"Der Ordner '{ueber_ordner}' wurde gefunden.")
+        except FileNotFoundError:
+            print(f"Der Ordner '{ueber_ordner}' wurde nicht gefunden.")
 
         if not os.path.exists(auftrag_ordner_name):      
             os.makedirs(auftrag_ordner_name)
@@ -169,5 +182,51 @@ class FolderCreator(App):
 
         self.current_number += 1
 
-elevate.elevate()
+        self.exelliste()
+
+    def exelliste(self):
+
+        dateiname = "Auftragsliste.xlsx"
+        pfad = Path(dateiname)
+
+        if pfad.is_file():
+            wb = load_workbook(filename="Auftragsliste.xlsx")
+            ws = wb.active
+            row_number = ws.max_row + 1
+
+            ws["A" + str(row_number)] = self.current_number
+            ws["B" + str(row_number)] = datetime.now().strftime("%d.%m.%Y")
+            ws["C" + str(row_number)] = self.geber_text.text
+            ws["D" + str(row_number)] = self.arbeit_text.text
+            ws["E" + str(row_number)] = self.strasse_text.text
+            ws["F" + str(row_number)] = self.plz_text.text
+            ws["G" + str(row_number)] = self.telefon_text.text
+
+            wb.save("Auftragsliste.xlsx")
+            print("Die Daten wurden zur Datei hinzugefügt.")
+        else:
+            print("Die Datei existiert noch nicht.")
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Auftragsliste"
+            ws["A1"] = "Nr"
+            ws["B1"] = "Datum"
+            ws["C1"] = "Auftraggeber"
+            ws["D1"] = "Auftragsarbeit"
+            ws["E1"] = "Straße"
+            ws["F1"] = "PLZ / Ort"
+            ws["G1"] = "Telefonnummer."
+
+            ws["A2"] = self.current_number
+            ws["B2"] = datetime.now().strftime("%d.%m.%Y")
+            ws["C2"] = self.geber_text.text
+            ws["D2"] = self.arbeit_text.text
+            ws["E2"] = self.strasse_text.text
+            ws["F2"] = self.plz_text.text
+            ws["G2"] = self.telefon_text.text
+
+            wb.save("Auftragsliste.xlsx")
+
+            os.system("Auftragsliste.xlsx")
+
 FolderCreator().run()
