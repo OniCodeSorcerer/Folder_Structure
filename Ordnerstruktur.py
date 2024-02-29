@@ -20,16 +20,12 @@ from openpyxl import Workbook
 from openpyxl import load_workbook
 from kivy.uix.popup import Popup
 
-
 elevate.elevate()
 
-
 class FolderCreator(App):
-    def build(self):
-        
+    def build(self):     
         Window.size = (600,380)
 
-        self.current_number = self.get_current_number()
         self.kwtmva = ""
         self.ueber_ordner = ""
            
@@ -72,13 +68,14 @@ class FolderCreator(App):
         self.summe_text = TextInput(multiline= False,size_hint_y=None, height=30, write_tab= False)
         layout.add_widget(self.summe_text)
 
-        dropdown_label = Label(text= "Ordnerauswahl: ")
-        layout.add_widget(dropdown_label)        
+        self.auswahl_label = Label(text= f"Aktuelle Auftragsnummer KAU: {self.get_current_kau_number()}")
+        layout.add_widget(self.auswahl_label)    
         
-        self.button_label = Label(text= f"Aktuelle Nummer: {self.current_number}")
+        self.button_label = Label(text= f"Aktuelle Auftragsnummer MVA/KWT: {self.get_current_number()}")
         layout.add_widget(self.button_label)
 
-        self.dropdown_button = Button(text="Ausgewählter Ordner",size_hint_y=None, height=widget_height)
+
+        self.dropdown_button = Button(text="Ordner auswählen",size_hint_y=None, height=widget_height)
         self.dropdown_button.bind(on_release=self.show_dropdown)
 
         self.dropdown = DropDown()
@@ -105,20 +102,33 @@ class FolderCreator(App):
         if instance.text == "Kleinstaufträge":
             self.ueber_ordner = "04-Kleinstaufträge"
             self.kwtmva = "KAU_"
+            self.current_number = self.get_current_kau_number()
+            self.number_text = "current_kau_number.txt"
 
         elif instance.text == "Klärwerkstechnik":
             self.ueber_ordner = "03-Aufträge"
             self.kwtmva = "KWT_"
-
+            self.current_number = self.get_current_number()
+            self.number_text = "current_number.txt"
 
         elif instance.text == "Metallverarbeitung":
             self.ueber_ordner = "03-Aufträge"
             self.kwtmva = "MVA_"
+            self.current_number = self.get_current_number()
+            self.number_text = "current_number.txt"
 
 
     def get_current_number(self):
         if os.path.exists("current_number.txt"):
             with open("current_number.txt", "r") as file:
+                return int(file.read().strip())
+        else:
+            return 1
+
+
+    def get_current_kau_number(self):
+        if os.path.exists("current_kau_number.txt"):
+            with open("current_kau_number.txt", "r") as file:
                 return int(file.read().strip())
         else:
             return 1
@@ -136,8 +146,7 @@ class FolderCreator(App):
         auftragsname = self.geber_text.text
         arbeit = self.arbeit_text.text
         datum = datetime.now().strftime("%Y%m%d")
-        num = self.current_number
-        auftrag_ordner_name = f"{num:03d}_{datum}_{self.kwtmva}{auftragsname}-{arbeit}"
+        auftrag_ordner_name = f"{self.current_number:03d}_{datum}_{self.kwtmva}{auftragsname}-{arbeit}"
         texteingabe = f"Erstellt am: {datum} \nAuftraggeber: {auftragsname} \nProje: {arbeit} \nStraße: {self.strasse_text.text} \nPLZ / Ort: {self.plz_text.text} \nTelefonnr.: {self.telefon_text.text} \n"
         ueber_ordner = self.ueber_ordner        
         manufactory_ordner = "07-Manufactory"
@@ -153,14 +162,12 @@ class FolderCreator(App):
         if not os.path.exists(ueber_ordner):
             os.makedirs(ueber_ordner)
             print(f"Der Ordner '{ueber_ordner}' wurde erfolgreich erstellt.")
-
         else:
             print(f"Der Ordner '{ueber_ordner}' existiert bereits.")
 
         if not os.path.exists(manufactory_ordner):
             os.makedirs(manufactory_ordner)
             print(f"Der Ordner '{manufactory_ordner}' wurde erfolgreich erstellt.")
-
         else:
             print(f"Der Ordner '{manufactory_ordner}' existiert bereits.")
 
@@ -169,7 +176,6 @@ class FolderCreator(App):
         if not os.path.exists(auftrag_ordner_name):
             os.makedirs(auftrag_ordner_name)
             print(f"Der Ordner '{auftrag_ordner_name}' wurde erfolgreich im {manufactory_ordner} erstellt.")
-
         else:
             print(f"Der Ordner '{auftrag_ordner_name}' in {manufactory_ordner} existiert bereits.")
 
@@ -192,7 +198,6 @@ class FolderCreator(App):
                 manufactory_ver = os.path.join(ueber_dir, manufactory)
                 os.symlink(manufactory_dir, manufactory_ver)
                 print(f"Die Ordnerverknüpfung {manufactory} wurde erfolgreich erstellt.")
-
             except PermissionError:
                 error_message = "keine Rechte vorhanden. Programm als Admin starten!"
                 self.show_error(error_message)
@@ -202,20 +207,18 @@ class FolderCreator(App):
 
         else:
             print(f"Der Ordner '{auftrag_ordner_name}' existiert bereits.")
-
         
         os.chdir(working_dir)
-        with open("current_number.txt", "w") as file:
-            file.write(str(num + 1))
-
-        self.current_number += 1
+        with open(self.number_text, "w") as file:
+            file.write(str(self.current_number + 1))
 
         self.exelliste()
 
-    def exelliste(self):
 
+    def exelliste(self):
         dateiname = "Auftragsliste.xlsx"
         pfad = Path(dateiname)
+
         try:
             if pfad.is_file():
                 wb = load_workbook(filename="Auftragsliste.xlsx")
@@ -224,12 +227,13 @@ class FolderCreator(App):
 
                 ws["A" + str(row_number)] = self.current_number
                 ws["B" + str(row_number)] = datetime.now().strftime("%d.%m.%Y")
-                ws["C" + str(row_number)] = self.geber_text.text
-                ws["D" + str(row_number)] = self.arbeit_text.text
-                ws["E" + str(row_number)] = self.strasse_text.text
-                ws["F" + str(row_number)] = self.plz_text.text
-                ws["G" + str(row_number)] = self.telefon_text.text
-                ws["H" + str(row_number)] = self.summe_text.text
+                ws["C" + str(row_number)] = self.kwtmva
+                ws["D" + str(row_number)] = self.geber_text.text
+                ws["E" + str(row_number)] = self.arbeit_text.text
+                ws["F" + str(row_number)] = self.strasse_text.text
+                ws["G" + str(row_number)] = self.plz_text.text
+                ws["H" + str(row_number)] = self.telefon_text.text
+                ws["I" + str(row_number)] = self.summe_text.text
 
                 wb.save(dateiname)
                 print(f"Die Daten wurden zur {dateiname} hinzugefügt.")
@@ -238,26 +242,28 @@ class FolderCreator(App):
                 wb = Workbook()
                 ws = wb.active
                 ws.title = "Auftragsliste"
+
                 ws["A1"] = "Nr"
                 ws["B1"] = "Datum"
-                ws["C1"] = "Auftraggeber"
-                ws["D1"] = "Projekt"
-                ws["E1"] = "Straße"
-                ws["F1"] = "PLZ / Ort"
-                ws["G1"] = "Telefonnummer"
-                ws["H1"] = "Auftragssumme"
+                ws["C1"] = "KWT/MVA"
+                ws["D1"] = "Auftraggeber"
+                ws["E1"] = "Projekt"
+                ws["F1"] = "Straße"
+                ws["G1"] = "PLZ / Ort"
+                ws["H1"] = "Telefonnr."
+                ws["I1"] = "Summe"
 
                 ws["A2"] = self.current_number
                 ws["B2"] = datetime.now().strftime("%d.%m.%Y")
-                ws["C2"] = self.geber_text.text
-                ws["D2"] = self.arbeit_text.text
-                ws["E2"] = self.strasse_text.text
-                ws["F2"] = self.plz_text.text
-                ws["G2"] = self.telefon_text.text
-                ws["H2"] = self.summe_text.text
+                ws["C2"] = self.kwtmva
+                ws["D2"] = self.geber_text.text
+                ws["E2"] = self.arbeit_text.text
+                ws["F2"] = self.strasse_text.text
+                ws["G2"] = self.plz_text.text
+                ws["H2"] = self.telefon_text.text
+                ws["I2"] = self.summe_text.text
 
                 wb.save(dateiname)
-
                 print(f"Die Exelliste {dateiname} existiert nicht. Eine neue Exeltabelle wird erstellt")
 
             self.clear_text()
@@ -274,8 +280,10 @@ class FolderCreator(App):
         self.plz_text.text = ""
         self.telefon_text.text = ""
         self.summe_text.text = ""
-        self.current_number = self.get_current_number()
-        self.button_label.text = f"Aktuelle Nummer: {self.current_number}"
+        self.current_number += 1
+        self.button_label.text = f"Aktuelle Auftragsnummer MVA/KWT: {self.get_current_number()}"
+        self.auswahl_label.text = f"Aktuelle Auftragsnummer KAU: {self.get_current_kau_number()}"
+
 
     def show_error(self, instance):
         box = BoxLayout(orientation='vertical', padding=10, spacing=10)
@@ -285,6 +293,7 @@ class FolderCreator(App):
         popup = Popup(title='Fehler', content=box, size_hint=(None, None), size=(500, 200))
         popup.open()
         mybutton.bind(on_press=popup.dismiss)
+
 
 try:
     FolderCreator().run()
